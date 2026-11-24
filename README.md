@@ -2,6 +2,12 @@
 
 REST API сервіс для додавання цікавих локацій, оцінювання, відгуків, перегляду популярних місць, експорту даних у JSON/CSV та email-сповіщень.
 
+![Image 1](images/img_1.png)
+![Image 2](images/img_2.png)
+![Image 3](images/img_3.png)
+![Image 4](images/img_4.png)
+![Image 5](images/img_5.png)
+
 ## Технологічний стек
 - **Python 3.12**, **Django 5.1**, **Django REST Framework**
 - **PostgreSQL 16** (у Docker-контейнері з автоматичним створенням БД та користувача)

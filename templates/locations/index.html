@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мапа популярності локацій</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #e2e8f0;
+      --danger: #dc2626;
+      --success: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand { font-size: 18px; font-weight: 700; }
+    .auth-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      background: #eff6ff;
+      color: var(--primary);
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    button, select, input, textarea {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+    }
+    button {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    button.secondary:hover { background: #f8fafc; }
+    button.small { padding: 5px 10px; font-size: 13px; }
+    .container {
+      max-width: 1160px;
+      margin: 24px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 20px;
+    }
+    @media (max-width: 860px) {
+      .container { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .location-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .location-card:hover, .location-card.active {
+      border-color: var(--primary);
+      background: #f8fbff;
+    }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .review-item {
+      border-top: 1px solid var(--border);
+      padding: 12px 0;
+    }
+    .review-item:first-child { border-top: none; }
+    .votes { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+    .form-grid { display: grid; gap: 10px; margin-top: 10px; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: none;
+      z-index: 50;
+    }
+    /* Модальне вікно входу / реєстрації / вибору гостя */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 40;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: 14px;
+      max-width: 420px;
+      width: 100%;
+      padding: 22px;
+      border: 1px solid var(--border);
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">📍 Мапа популярності локацій</div>
+    <div class="auth-bar">
+      <span id="userBadge" class="badge">Гість</span>
+      <button id="btnOpenLogin" class="secondary small" onclick="openAuthModal('login')">Увійти</button>
+      <button id="btnOpenRegister" class="small" onclick="openAuthModal('register')">Реєстрація</button>
+      <button id="btnLogout" class="secondary small hidden" onclick="logout()">Вийти</button>
+      <a href="/admin/" style="font-size:13px; color:var(--muted); margin-left:6px;">Admin</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Ліва колонка: локації та створення нової -->
+    <div>
+      <div class="panel">
+        <h2 style="margin-top:0;">Локації</h2>
+        <div class="filters">
+          <input id="searchInput" type="text" placeholder="Пошук..." style="flex:1; min-width:140px;" />
+          <select id="categoryFilter">
+            <option value="">Усі категорії</option>
+          </select>
+          <select id="orderingSelect">
+            <option value="-popularity_score">За популярністю</option>
+            <option value="-avg_rating">За рейтингом</option>
+            <option value="-created_at">Найновіші</option>
+          </select>
+          <button class="secondary small" onclick="loadLocations()">Знайти</button>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <a href="/api/locations/export/?format=json" target="_blank"><button class="secondary small" type="button">Експорт JSON</button></a>
+          <a href="/api/locations/export/?format=csv" target="_blank"><button class="secondary small" type="button">Експорт CSV</button></a>
+        </div>
+        <div id="locationsList">Завантаження...</div>
+      </div>
+
+      <div id="createLocationPanel" class="panel hidden" style="margin-top:16px;">
+        <h3 style="margin-top:0;">Додати локацію</h3>
+        <form id="createLocationForm" class="form-grid">
+          <input name="title" placeholder="Назва локації" required />
+          <select id="newLocCategory" name="category" required></select>
+          <input name="address" placeholder="Адреса" required />
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input name="latitude" type="number" step="any" placeholder="Широта (-90..90)" required />
+            <input name="longitude" type="number" step="any" placeholder="Довгота (-180..180)" required />
+          </div>
+          <textarea name="description" rows="2" placeholder="Опис локації" required></textarea>
+          <button type="submit">Створити локацію</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Права колонка: деталі локації та відгуки -->
+    <div class="panel">
+      <div id="locationDetail">Оберіть локацію ліворуч, щоб переглянути деталі та відгуки.</div>
+
+      <div id="reviewsSection" class="hidden" style="margin-top:20px;">
+        <h3>Відгуки</h3>
+        <form id="createReviewForm" class="form-grid hidden" style="margin-bottom:16px;">
+          <label style="font-size:14px;">
+            Оцінка (1–5):
+            <select name="rating" required>
+              <option value="5">5 — Чудово</option>
+              <option value="4">4 — Добре</option>
+              <option value="3">3 — Нормально</option>
+              <option value="2">2 — Слабко</option>
+              <option value="1">1 — Жахливо</option>
+            </select>
+          </label>
+          <textarea name="comment" rows="2" placeholder="Ваш відгук..." required></textarea>
+          <button type="submit">Залишити відгук</button>
+        </form>
+        <div id="guestReviewHint" class="meta" style="margin-bottom:12px;">
+          Щоб залишити відгук або підписатися на оновлення, <a href="#" onclick="openAuthModal('login'); return false;">увійдіть</a> або <a href="#" onclick="openAuthModal('register'); return false;">зареєструйтеся</a>.
+        </div>
+        <div id="reviewsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальне вікно входу / реєстрації / продовження як гість -->
+  <div id="authModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="tabs">
+        <button id="tabLogin" class="secondary small" type="button" onclick="switchAuthTab('login')">Увійти</button>
+        <button id="tabRegister" class="secondary small" type="button" onclick="switchAuthTab('register')">Реєстрація</button>
+      </div>
+
+      <form id="loginForm" class="form-grid">
+        <input name="username" placeholder="Логін (username)" required />
+        <input name="password" type="password" placeholder="Пароль" required />
+        <button type="submit">Увійти в акаунт</button>
+      </form>
+
+      <form id="registerForm" class="form-grid hidden">
+        <input name="username" placeholder="Логін (username)" required />
+        <input name="email" type="email" placeholder="Email" required />
+        <input name="password" type="password" placeholder="Пароль (мін. 8 символів)" required />
+        <button type="submit">Зареєструватися</button>
+      </form>
+
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--border);" />
+      <button class="secondary" style="width:100%;" type="button" onclick="continueAsGuest()">
+        Продовжити без акаунту (гість)
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    let currentUser = null;
+    let selectedLocationId = null;
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    async function apiFetch(url, options = {}) {
+      const headers = options.headers || {};
+      if (options.body && !(options.body instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+      }
+      const csrftoken = getCookie("csrftoken");
+      if (csrftoken && ["POST", "PUT", "PATCH", "DELETE"].includes((options.method || "GET").toUpperCase())) {
+        headers["X-CSRFToken"] = csrftoken;
+      }
+      const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
+      return res;
+    }
+
+    function openAuthModal(mode = "login") {
+      switchAuthTab(mode);
+      document.getElementById("authModal").classList.add("open");
+    }
+
+    function closeAuthModal() {
+      document.getElementById("authModal").classList.remove("open");
+    }
+
+    function switchAuthTab(mode) {
+      const isLogin = mode === "login";
+      document.getElementById("loginForm").classList.toggle("hidden", !isLogin);
+      document.getElementById("registerForm").classList.toggle("hidden", isLogin);
+      document.getElementById("tabLogin").classList.toggle("secondary", !isLogin);
+      document.getElementById("tabRegister").classList.toggle("secondary", isLogin);
+    }
+
+    function continueAsGuest() {
+      localStorage.setItem("guestModeDismissed", "1");
+      closeAuthModal();
+      showToast("Ви продовжили як гість");
+    }
+
+    function updateAuthUI() {
+      const badge = document.getElementById("userBadge");
+      const btnLogin = document.getElementById("btnOpenLogin");
+      const btnReg = document.getElementById("btnOpenRegister");
+      const btnLogout = document.getElementById("btnLogout");
+      const createLocPanel = document.getElementById("createLocationPanel");
+      const reviewForm = document.getElementById("createReviewForm");
+      const guestHint = document.getElementById("guestReviewHint");
+
+      if (currentUser) {
+        badge.textContent = `👤 ${currentUser.username}`;
+        btnLogin.classList.add("hidden");
+        btnReg.classList.add("hidden");
+        btnLogout.classList.remove("hidden");
+        createLocPanel.classList.remove("hidden");
+        reviewForm.classList.remove("hidden");
+        guestHint.classList.add("hidden");
+      } else {
+        badge.textContent = "Гість";
+        btnLogin.classList.remove("hidden");
+        btnReg.classList.remove("hidden");
+        btnLogout.classList.add("hidden");
+        createLocPanel.classList.add("hidden");
+        reviewForm.classList.add("hidden");
+        guestHint.classList.remove("hidden");
+      }
+    }
+
+    async function detectCurrentSession() {
+      // Перевіряємо через легкий запит: якщо є сесія, можемо дізнатися користувача після логіну/реєстрації
+      if (!currentUser && !localStorage.getItem("guestModeDismissed")) {
+        openAuthModal("login");
+      }
+      updateAuthUI();
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const res = await apiFetch("/api/auth/login/", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(fd.entries())),
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.detail || "Помилка входу");
+      currentUser = data;
+      localStorage.setItem("guestModeDismissed", "1");
+      closeAuthModal();
+      updateAuthUI();
+      showToast(`Вітаємо, ${data.username}!`);
+    });
+
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const res = await apiFetch("/api/auth/register/", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(fd.entries())),
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(JSON.stringify(data));
+      currentUser = data;
+      localStorage.setItem("guestModeDismissed", "1");
+      closeAuthModal();
+      updateAuthUI();
+      showToast(`Акаунт створено: ${data.username}`);
+    });
+
+    async function logout() {
+      await apiFetch("/api/auth/logout/", { method: "POST" });
+      currentUser = null;
+      updateAuthUI();
+      showToast("Ви вийшли з акаунту");
+    }
+
+    async function loadCategories() {
+      const res = await apiFetch("/api/categories/");
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = data.results || data;
+      const filterSel = document.getElementById("categoryFilter");
+      const newLocSel = document.getElementById("newLocCategory");
+      filterSel.innerHTML = '<option value="">Усі категорії</option>';
+      newLocSel.innerHTML = "";
+      for (const cat of items) {
+        filterSel.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+        newLocSel.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+      }
+    }
+
+    async function loadLocations() {
+      const params = new URLSearchParams();
+      const search = document.getElementById("searchInput").value.trim();
+      const cat = document.getElementById("categoryFilter").value;
+      const ordering = document.getElementById("orderingSelect").value;
+      if (search) params.set("search", search);
+      if (cat) params.set("category", cat);
+      if (ordering) params.set("ordering", ordering);
+
+      const res = await apiFetch(`/api/locations/?${params.toString()}`);
+      const listEl = document.getElementById("locationsList");
+      if (!res.ok) {
+        listEl.innerHTML = "Не вдалося завантажити локації.";
+        return;
+      }
+      const data = await res.json();
+      const items = data.results || data;
+      if (!items.length) {
+        listEl.innerHTML = "<p class='meta'>Локацій не знайдено.</p>";
+        return;
+      }
+      listEl.innerHTML = items.map(loc => `
+        <div class="location-card ${loc.id === selectedLocationId ? 'active' : ''}" onclick="selectLocation(${loc.id})">
+          <strong>${loc.title}</strong> <span class="badge">${loc.category_name}</span>
+          <div class="meta">
+            ⭐ ${Number(loc.avg_rating || 0).toFixed(1)} (${loc.reviews_count} відг.) ·
+            👁 ${loc.views_last_7_days} за 7д ·
+            🔥 ${Number(loc.popularity_score || 0).toFixed(1)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function selectLocation(id) {
+      selectedLocationId = id;
+      loadLocations();
+      const res = await apiFetch(`/api/locations/${id}/`);
+      if (!res.ok) return;
+      const loc = await res.json();
+
+      document.getElementById("locationDetail").innerHTML = `
+        <h2 style="margin-top:0;">${loc.title}</h2>
+        <p>${loc.description}</p>
+        <div class="meta">
+          Категорія: <strong>${loc.category_name}</strong> · Автор: <strong>${loc.author_username}</strong><br/>
+          Адреса: ${loc.address} (${loc.latitude}, ${loc.longitude})<br/>
+          Середній рейтинг: <strong>${Number(loc.avg_rating || 0).toFixed(2)}</strong> ·
+          Відгуків: <strong>${loc.reviews_count}</strong> ·
+          Переглядів за 7 днів: <strong>${loc.views_last_7_days}</strong> ·
+          Популярність: <strong>${Number(loc.popularity_score || 0).toFixed(2)}</strong>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="secondary small" onclick="subscribeLocation(${loc.id}, 'POST')">Підписатися на email</button>
+          <button class="secondary small" onclick="subscribeLocation(${loc.id}, 'DELETE')">Відписатися</button>
+        </div>
+      `;
+      document.getElementById("reviewsSection").classList.remove("hidden");
+      loadReviews(id);
+    }
+
+    async function subscribeLocation(id, method) {
+      if (!currentUser) return openAuthModal("login");
+      const res = await apiFetch(`/api/locations/${id}/subscribe/`, { method });
+      const data = await res.json();
+      showToast(data.detail || (res.ok ? "Готово" : "Помилка"));
+    }
+
+    async function loadReviews(locationId) {
+      const res = await apiFetch(`/api/locations/${locationId}/reviews/`);
+      const listEl = document.getElementById("reviewsList");
+      if (!res.ok) return;
+      const data = await res.json();
+      const items = data.results || data;
+      if (!items.length) {
+        listEl.innerHTML = "<p class='meta'>Відгуків поки немає.</p>";
+        return;
+      }
+      listEl.innerHTML = items.map(r => `
+        <div class="review-item">
+          <div><strong>${r.author_username}</strong> · ⭐ ${r.rating}/5</div>
+          <p style="margin:6px 0;">${r.comment}</p>
+          <div class="votes">
+            <button class="secondary small" onclick="voteReview(${locationId}, ${r.id}, 'like')">👍 ${r.likes_count}</button>
+            <button class="secondary small" onclick="voteReview(${locationId}, ${r.id}, 'dislike')">👎 ${r.dislikes_count}</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    async function voteReview(locationId, reviewId, voteType) {
+      if (!currentUser) return openAuthModal("login");
+      const res = await apiFetch(`/api/locations/${locationId}/reviews/${reviewId}/vote/`, {
+        method: "POST",
+        body: JSON.stringify({ vote_type: voteType }),
+      });
+      if (!res.ok) return showToast("Не вдалося проголосувати");
+      loadReviews(locationId);
+    }
+
+    document.getElementById("createReviewForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!selectedLocationId) return showToast("Спочатку оберіть локацію");
+      const fd = new FormData(e.target);
+      const res = await apiFetch(`/api/locations/${selectedLocationId}/reviews/`, {
+        method: "POST",
+        body: JSON.stringify({
+          rating: Number(fd.get("rating")),
+          comment: fd.get("comment"),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(data.detail || "Помилка додавання відгуку");
+      e.target.reset();
+      showToast("Відгук додано!");
+      selectLocation(selectedLocationId);
+    });
+
+    document.getElementById("createLocationForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        title: fd.get("title"),
+        category: Number(fd.get("category")),
+        address: fd.get("address"),
+        latitude: Number(fd.get("latitude")),
+        longitude: Number(fd.get("longitude")),
+        description: fd.get("description"),
+      };
+      const res = await apiFetch("/api/locations/", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) return showToast(JSON.stringify(data));
+      e.target.reset();
+      showToast("Локацію створено!");
+      loadLocations();
+      selectLocation(data.id);
+    });
+
+    (async function init() {
+      await detectCurrentSession();
+      await loadCategories();
+      await loadLocations();
+    })();
+  </script>
+</body>
+</html>

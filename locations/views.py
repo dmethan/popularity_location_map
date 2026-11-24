@@ -3,7 +3,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status, viewsets
@@ -39,6 +39,8 @@ from .services import (
 
 User = get_user_model()
 
+def index_view(request):
+    return render(request, "locations/index.html")
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
