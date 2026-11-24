@@ -1,0 +1,54 @@
+# Секрети та локальні конфіги
+.env
+*.local
+.git/
+.github/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.log
+db.sqlite3
+db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
+/media/
+/staticfiles/
+/static_root/
+
+# Віртуальні середовища
+venv/
+.venv/
+env/
+ENV/
+
+# Локальні файли БД та дампи
+*.sqlite
+*.sqlite3
+*.db
+*.psql
+*.sql
+*.dump
+pgdata/
+postgres-data/
+redis-data/
+
+# PyCharm / IDE / ОС
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Тести та покриття
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/

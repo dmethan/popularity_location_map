@@ -1,0 +1,70 @@
+# Секрети та локальні конфіги (НЕ ігноруємо .env.example)
+.env
+*.local
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.manifest
+*.spec
+.python-version
+
+# Віртуальні середовища
+venv/
+.venv/
+env/
+.env*/
+ENV/
+venv.bak/
+env.bak/
+
+# Django артефакти та логи
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+db.sqlite3-shm
+db.sqlite3-wal
+/media/
+/staticfiles/
+/static_root/
+
+# Локальні файли баз даних та дампів
+*.sqlite
+*.sqlite3
+*.db
+*.psql
+*.sql
+*.dump
+pgdata/
+postgres-data/
+redis-data/
+
+# PyCharm / JetBrains IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+cmake-build-*/
+
+# Інші редактори та системні файли
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Тести та покриття
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
